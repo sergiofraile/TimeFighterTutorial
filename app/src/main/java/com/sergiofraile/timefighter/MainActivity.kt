@@ -20,11 +20,13 @@ class MainActivity : AppCompatActivity() {
     private val initialCountDown: Long = 60000
     private val countDownInterval: Long = 1000
     private val TAG = MainActivity::class.java.simpleName
+    private var timeLeftOnTimer: Long = 60000
 
     companion object {
         private val SCORE_KEY = "SCORE_KEY"
         private  val TIME_LEFT_KEY = "TIME_LEFT_KEY"
     }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -40,6 +42,21 @@ class MainActivity : AppCompatActivity() {
         }
 
         resetGame()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle?) {
+        super.onSaveInstanceState(outState)
+
+        outState?.putInt(SCORE_KEY, score)
+        outState?.putLong(TIME_LEFT_KEY, timeLeftOnTimer)
+        countDownTimer.cancel()
+        Log.d(TAG, "onSaveInstanceState: Saving score: $score and Time Left: $timeLeftOnTimer")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        Log.d(TAG, "onDestroy called.")
     }
 
     private fun incrementScore() {
@@ -77,6 +94,7 @@ class MainActivity : AppCompatActivity() {
 
         countDownTimer = object: CountDownTimer(initialCountDown, countDownInterval) {
             override fun onTick(p0: Long) {
+                timeLeftOnTimer = p0
                 updateTimeLeftTextView(p0/countDownInterval)
             }
 
