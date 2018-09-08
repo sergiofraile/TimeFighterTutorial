@@ -3,10 +3,15 @@ package com.sergiofraile.timefighter
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.support.v7.app.AlertDialog
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
+import android.view.animation.AlphaAnimation
+import android.view.animation.AnimationUtils
 
 class MainActivity : AppCompatActivity() {
 
@@ -37,11 +42,19 @@ class MainActivity : AppCompatActivity() {
         gameScoreTextView = findViewById(R.id.game_score_text_view)
         timeLeftTextView = findViewById(R.id.time_left_text_view)
 
-        tapMeButton.setOnClickListener { _ ->
+        tapMeButton.setOnClickListener { view ->
+            val bounceAnimation = AnimationUtils.loadAnimation(this, R.anim.bounce)
+            view.startAnimation(bounceAnimation)
             incrementScore()
         }
 
-        resetGame()
+        if (savedInstanceState != null) {
+            score = savedInstanceState.getInt(SCORE_KEY)
+            timeLeftOnTimer = savedInstanceState.getLong(TIME_LEFT_KEY)
+            restoreGame()
+        } else {
+            resetGame()
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle?) {
@@ -51,6 +64,19 @@ class MainActivity : AppCompatActivity() {
         outState?.putLong(TIME_LEFT_KEY, timeLeftOnTimer)
         countDownTimer.cancel()
         Log.d(TAG, "onSaveInstanceState: Saving score: $score and Time Left: $timeLeftOnTimer")
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        super.onCreateOptionsMenu(menu)
+        menuInflater.inflate(R.menu.menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem?): Boolean {
+        if (item?.itemId == R.id.action_about) {
+            showInfo()
+        }
+        return true
     }
 
     override fun onDestroy() {
@@ -68,6 +94,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateScoreTextView() {
+        val alphaAnimation = AlphaAnimation(0.0f, 1.0f)
+        alphaAnimation.duration = 300
+        gameScoreTextView.startAnimation(alphaAnimation)
         gameScoreTextView.text = getString(R.string.your_score,  score.toString())
     }
 
@@ -75,9 +104,30 @@ class MainActivity : AppCompatActivity() {
         timeLeftTextView.text = getString(R.string.time_left,  timeLeft.toString())
     }
 
+    private fun setupCountdownTimer(time: Long) {
+        countDownTimer = object: CountDownTimer(time, countDownInterval) {
+            override fun onTick(p0: Long) {
+                timeLeftOnTimer = p0
+                updateTimeLeftTextView(p0/countDownInterval)
+            }
+
+            override fun onFinish() {
+                endGame()
+            }
+        }
+    }
+
     private fun startGame() {
         countDownTimer.start()
         gameStarted = true
+    }
+
+    private fun restoreGame() {
+        updateScoreTextView()
+        updateTimeLeftTextView(timeLeftOnTimer/100)
+
+        setupCountdownTimer(timeLeftOnTimer)
+        startGame()
     }
 
     private fun endGame() {
@@ -92,17 +142,17 @@ class MainActivity : AppCompatActivity() {
         val initialTimeLeft = initialCountDown / countDownInterval
         updateTimeLeftTextView(initialTimeLeft)
 
-        countDownTimer = object: CountDownTimer(initialCountDown, countDownInterval) {
-            override fun onTick(p0: Long) {
-                timeLeftOnTimer = p0
-                updateTimeLeftTextView(p0/countDownInterval)
-            }
-
-            override fun onFinish() {
-                endGame()
-            }
-        }
+        setupCountdownTimer(initialCountDown)
 
         gameStarted = false
+    }
+
+    private fun showInfo() {
+        val dialogTitle = getString(R.string.about_title, BuildConfig.VERSION_NAME)
+        val dialogMessage = getString(R.string.about_message)
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle(dialogTitle)
+        builder.setMessage(dialogMessage)
+        builder.create().show()
     }
 }
